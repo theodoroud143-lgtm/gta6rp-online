@@ -1,0 +1,155 @@
+<!doctype html><html lang="el"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"><title>GTA 6 RP — Greece City 3D</title><style>
+*{box-sizing:border-box}body{margin:0;overflow:hidden;background:#08131e;color:white;font:14px Arial}canvas{display:block}button{cursor:pointer;background:#172c43;color:white;border:1px solid #6484a3;border-radius:8px;padding:10px;font-weight:bold}button:active{background:#3674ad}#hud{position:absolute;right:12px;top:12px;background:#091523d9;padding:12px;border-radius:12px;min-width:195px;text-align:right}#hud b{font-size:21px;color:#ffd36c}#bar{height:12px;background:#441b21;border-radius:8px;overflow:hidden;margin-top:8px}#life{height:100%;background:#e53e47;width:100%}#info{position:absolute;left:12px;top:12px;background:#091523d9;padding:10px;border-radius:9px;max-width:280px}#map{position:absolute;bottom:12px;left:12px;width:185px;height:150px;background:#091523df;border:2px solid #ddd;border-radius:10px;cursor:pointer}#panel{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#091523f5;border:1px solid #8ca7c0;border-radius:14px;padding:18px;width:min(92vw,420px);max-height:80vh;overflow:auto;display:none;z-index:5}#panel h2{margin-top:0}#panel button{display:block;width:100%;margin:7px 0;text-align:left}#notice{position:absolute;top:20%;left:50%;transform:translateX(-50%);background:#061522e8;padding:12px;border-radius:9px;pointer-events:none;text-align:center;max-width:85vw}#touch{position:absolute;bottom:12px;right:12px;display:grid;grid-template-columns:repeat(3,55px);gap:5px}#touch button{height:51px;background:#152d46cc;touch-action:none}#actions{position:absolute;right:12px;bottom:190px;display:flex;gap:5px}#actions button{background:#142c44d9}#mapFull{position:absolute;inset:5%;background:#071524f5;border:2px solid #8ca7c0;border-radius:14px;display:none;z-index:8;padding:12px}#mapFull canvas{width:100%;height:calc(100% - 95px);background:#17405b;cursor:crosshair}#mapFull select{max-width:50%;padding:8px}small{color:#a8c6dd}#error{position:absolute;top:40%;left:10%;right:10%;text-align:center;background:#152536;padding:20px;display:none} @media(min-width:850px){#touch{opacity:.65}}
+</style></head><body><div id="hud"><b>GTA 6 RP</b><div id="stats"></div><div id="bar"><div id="life"></div></div><small>ΖΩΗ</small></div><div id="info">WASD / βελάκια: κίνηση • E: είσοδος / έξοδος • M: χάρτης • F: αλληλεπίδραση<br><small>3D RP prototype — δικός του χάρτης</small></div><canvas id="map" width="370" height="300" title="Άνοιγμα χάρτη"></canvas><div id="notice">Καλώς ήρθες στο Greece City!</div><div id="actions"><button id="interact">Ενέργεια F</button><button id="vehicle">Όχημα E</button><button id="sound">🔊 Ήχος</button></div><div id="touch"><span></span><button data-key="w">▲</button><span></span><button data-key="a">◀</button><button data-key="s">▼</button><button data-key="d">▶</button></div><div id="panel"><h2 id="ptitle"></h2><div id="pbody"></div><button onclick="closePanel()">Κλείσιμο ✕</button></div><div id="mapFull"><h2>Χάρτης • επίλεξε προορισμό ή πάτα σημείο</h2><select id="dest"></select><button id="setdest">Βάλε σημάδι</button><button id="closemap">Κλείσιμο ✕</button><canvas id="bigmap" width="900" height="520"></canvas><small>Η κίτρινη γραμμή δείχνει τον προορισμό σου.</small></div><div id="startScreen" style="position:absolute;inset:0;background:#071524ee;z-index:20;display:flex;align-items:center;justify-content:center"><div style="width:min(92vw,420px);background:#132c43;padding:24px;border:1px solid #87a9c4;border-radius:16px;text-align:center"><h1 style="color:#ffd36c">GTA 6 RP</h1><p>Greece City • 3D</p><button id="solo" style="display:block;width:100%;margin:12px 0">ΠΑΙΞΕ ΜΟΝΟΣ</button><button id="friends" style="display:block;width:100%;margin:12px 0">ΠΑΙΞΕ ΜΕ ΦΙΛΟΥΣ</button><div id="connectBox" style="display:none;text-align:left"><p>Δώσε σε όλους τον ίδιο κωδικό δωματίου. Ανοίξτε τη διεύθυνση του ίδιου server.</p><input id="nick" maxlength="18" placeholder="Όνομα παίκτη" value="Παίκτης" style="padding:10px;width:100%;margin:4px 0"><input id="room" maxlength="24" placeholder="Κωδικός δωματίου" value="greece" style="padding:10px;width:100%;margin:4px 0"><button id="join" style="width:100%;margin:10px 0">ΣΥΝΔΕΣΗ</button><small id="connectionStatus">Για multiplayer πρέπει να εκτελείται ο συνοδευτικός Node.js server.</small></div></div></div><div id="error">Χρειάζεται σύνδεση στο Internet για να φορτωθεί η 3D μηχανή Three.js. Άνοιξε το αρχείο σε σύγχρονο browser.</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js';
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x91bed7);scene.fog=new THREE.Fog(0x91bed7,110,330);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,700);const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.shadowMap.enabled=true;document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xe4f5ff,0x4b6659,2.2));let sun=new THREE.DirectionalLight(0xfff2d5,2.7);sun.position.set(-70,110,55);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-150;sun.shadow.camera.right=150;sun.shadow.camera.top=150;sun.shadow.camera.bottom=-150;scene.add(sun);
+const mat=(c,metal=0)=>new THREE.MeshStandardMaterial({color:c,roughness:metal?.38:.83,metalness:metal});const ground=mat(0x65885a),road=mat(0x343b42),sand=mat(0xcdb77d),water=new THREE.MeshStandardMaterial({color:0x217ca6,metalness:.25,roughness:.26,transparent:true,opacity:.88}),glass=new THREE.MeshStandardMaterial({color:0x84c9e5,metalness:.25,roughness:.18,transparent:true,opacity:.44,side:THREE.DoubleSide});
+function box(w,h,d,m,x,y,z,parent=scene){let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
+function cyl(r1,r2,h,m,x,y,z,parent=scene){let o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,8),m);o.position.set(x,y,z);o.castShadow=true;parent.add(o);return o}
+function label(t,x,y,z,s=2){let c=document.createElement('canvas');c.width=1024;c.height=128;let a=c.getContext('2d');a.fillStyle='#10263c';a.fillRect(0,0,1024,128);a.font='bold 65px Arial';a.textAlign='center';a.fillStyle='white';a.fillText(t,512,87);let spr=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false}));spr.position.set(x,y,z);spr.scale.set(s*8,s,1);scene.add(spr)}
+box(280,1,220,water,-82,-.9,0);box(230,1,220,water,194,-.9,0);box(128,1,200,ground,-92,-.3,0);box(125,1,200,ground,188,-.3,0);box(27,.4,18,sand,-19,-.2,0);box(29,.4,18,sand,111,-.2,0);
+for(let x of [-135,-105,-75,-45,145,175,205,235])box(8,.12,190,road,x,.28,0);
+for(let z of [-80,-40,0,40,80]){box(112,.13,8,road,-92,.28,z);box(115,.13,8,road,188,.28,z)}
+box(100,.4,13,road,49,.5,0);for(let x=0;x<100;x+=15){box(1,4,.5,mat(0xd1d8dd),x,2.3,-6);box(1,4,.5,mat(0xd1d8dd),x,2.3,6)}label('ΓΕΦΥΡΑ ΔΥΟ ΠΟΛΕΩΝ',49,7,0,1.2);
+const locations=[['Αστυνομικό Τμήμα',-115,-53,0x315f91],['Δικαστήριο',-64,-53,0xc5b48b],['Περίπτερο',-100,21,0xd65e31],['Ξενοδοχείο',-55,62,0xa59a8e],['Κατάστημα αυτοκινήτων',-115,65,0x396f87],['Σπίτι',-55,21,0xc48c68],['Φυλακές Κορυδαλλού',185,61,0x9c9d9a],['Λιμάνι',-38,-83,0x597b9b],['Πίστα αγώνων',220,-58,0x6e7479]];
+for(let [name,x,z,color] of locations){let h=name==='Φυλακές Κορυδαλλού'?15:name==='Περίπτερο'?4:11;box(name==='Περίπτερο'?9:17,h,15,mat(color),x,h/2,z);box(4,3,.12,glass,x,h*.4,z+7.58);label(name,x,h+3,z, name.length>20?1.15:1.7)}
+for(let i=0;i<85;i++){let side=i<44?-92:188,x=side+(Math.floor(i*7%8)-4)*11,z=(Math.floor(i*13%15)-7)*12;if(Math.abs(x+115)<14&&Math.abs(z+53)<15)continue;if(Math.abs(x-185)<15&&Math.abs(z-61)<15)continue;if(Math.abs(x+64)<13&&Math.abs(z+53)<13)continue;let h=8+(i*17%43);if(Math.abs(x-side)<19)continue;box(7,h,7,mat([0x8a999c,0xa5a99f,0x777f87,0xc7b8a2][i%4]),x,h/2,z);for(let y=4;y<h-1;y+=4)box(7.05,1.4,.06,glass,x,y,z+3.54)}
+// Downtown skyline in both cities, away from main interaction buildings.
+for(let [cx,cz] of [[-123,-16],[-69,-15],[-123,89],[-69,89],[158,17],[202,17],[225,88],[156,88]]){
+ let h=55+(Math.abs(cx*7+cz*3)%42),tower=mat([0x657b91,0x7b8c99,0x596c80][Math.abs(cx)%3]);
+ box(9,h,9,tower,cx,h/2,cz);
+ for(let y=5;y<h-3;y+=4)for(let dx of [-4.56,4.56])box(.07,1.6,7,glass,cx+dx,y,cz);
+ for(let y=5;y<h-3;y+=4)for(let dz of [-4.56,4.56])box(7,1.6,.07,glass,cx,y,cz+dz);
+ box(3,4,3,mat(0x9caab5),cx,h+2,cz);
+}
+for(let i=0;i<45;i++){let x=i<23?-140+(i*13%110):140+(i*17%100),z=-91+(i*29%182);if(Math.abs(x%30)<6)continue;cyl(.24,.33,5,mat(0x755439),x,2.5,z);for(let k=0;k<5;k++){let leaf=box(.5,.18,5,mat(0x327b40),x,5.2,z);leaf.rotation.y=k*Math.PI*2/5;leaf.rotation.z=.2}}
+function person(color=0x2b506c){let g=new THREE.Group();cyl(.43,.45,1.6,mat(color),0,1.6,0,g);let head=new THREE.Mesh(new THREE.SphereGeometry(.36,10,8),mat(0xc89371));head.position.y=2.65;g.add(head);for(let s of [-1,1])box(.24,.9,.3,mat(0x20252a),s*.23,.47,0,g);return g}
+let player=person(0x183d75);scene.add(player);player.position.set(-90,.2,4);
+let npcs=[];for(let i=0;i<25;i++){let p=person([0x6d3034,0x27694c,0x7d6545,0x393a65][i%4]);p.position.set(i<13?-120+i*5:155+(i-13)*6,.2,-30+(i*19%110));scene.add(p);npcs.push({p,seed:i})}
+function car(color=0xb92f36,kind='car'){let g=new THREE.Group();let length=kind==='boat'?8:kind==='bike'?2.3:5.3;box(kind==='bike'?.45:2.4,.65,length,mat(color,true),0,.85,0,g);if(kind==='car'||kind==='police'){box(2.15,1.15,2.5,glass,0,1.67,-.15,g);box(2.25,.15,2.55,mat(color,true),0,2.25,-.15,g);for(let z of [-1.8,1.8])for(let x of [-1.15,1.15]){let wheel=new THREE.Mesh(new THREE.CylinderGeometry(.48,.48,.25,12),mat(0x101317));wheel.rotation.z=Math.PI/2;wheel.position.set(x,.48,z);g.add(wheel)}if(kind==='police')box(.9,.22,.45,mat(0xff2020),0,2.45,-.2,g)}
+if(kind==='bike'){for(let z of [-.85,.85]){let w=new THREE.Mesh(new THREE.TorusGeometry(.55,.09,7,16),mat(0x151515));w.position.set(0,.65,z);g.add(w)}box(1,.12,.15,mat(0x111111),0,1.65,-.8,g)}if(kind==='boat')box(1.7,.8,2,glass,0,1.55,0,g);return g}
+let vehicles=[];function spawn(kind,x,z,color,price=0){let g=car(color,kind);g.position.set(x,.3,z);scene.add(g);let v={g,kind,price};vehicles.push(v);return v}
+spawn('car',-84,10,0xb72929);spawn('car',-105,48,0xeeeeee);spawn('bike',-61,13,0xe9c83c);spawn('boat',-30,-91,0xeeeeee);spawn('police',-116,-39,0x233c65);spawn('car',171,-15,0x1e2227);
+
+// Fully explorable interiors in a separate district beyond the outdoor map.
+const interiors={};let inside=null;const interiorBase=420;
+function furnishing(x,y,z,w,h,d,color){return box(w,h,d,mat(color),x,y,z)}
+function makeInterior(name,i){
+ let cx=interiorBase+i*52,cz=0,group=new THREE.Group();scene.add(group);
+ // Indoor room: floor, three walls, ceiling beams, windows, entrance and furniture.
+ box(31,.35,28,mat(0x777e83),cx,-.05,cz);
+ box(31,7,.4,mat(0xd7d2c5),cx,3.5,cz-14);
+ box(.4,7,28,mat(0xd7d2c5),cx-15.5,3.5,cz);
+ box(.4,7,28,mat(0xd7d2c5),cx+15.5,3.5,cz);
+ for(let x of [-9,0,9])box(4,2,.06,glass,cx+x,4,cz-13.72);
+ let desk=mat(0x79533d),chair=mat(0x2b455d),steel=mat(0x686e76);
+ if(name==='Φυλακές Κορυδαλλού'){
+  label('ΦΥΛΑΚΕΣ ΚΟΡΥΔΑΛΛΟΥ',cx,6.4,cz-13,1.3);
+  for(let j=0;j<3;j++){let x=cx-10+j*10;box(8,.25,9,mat(0x8b8f92),x,.2,cz-6);for(let k=0;k<5;k++){box(.13,4,.13,steel,x-3.7+k*1.85,2.2,cz-1.5);box(.13,4,.13,steel,x-3.7+k*1.85,2.2,cz-10.5)}box(7,.13,.13,steel,x,3.8,cz-1.5);box(3,.55,1.6,mat(0x455f79),x,.65,cz-7);box(1.5,.3,1.4,mat(0xe2dfd1),x-1,.9,cz-7);box(1.5,1.6,.6,mat(0x85898c),x+2,1,cz-9)}
+  for(let j=0;j<2;j++){let guard=person(0x263b69);guard.position.set(cx-5+j*10,0,cz+6);scene.add(guard)}
+  label('ΚΕΛΙΑ • ΦΡΟΥΡΟΙ',cx,5,cz-4,1.1);
+ }else if(name==='Αστυνομικό Τμήμα'){
+  label('ΓΡΑΦΕΙΟ ΥΠΟΔΟΧΗΣ',cx,6,cz-13,1.1);
+  furnishing(cx,1,cz-5,11,2,2,0x78543b);
+  for(let j=0;j<3;j++){furnishing(cx-9+j*8,.65,cz+3,4,1.3,2,0x6e4d39);furnishing(cx-9+j*8,1.55,cz+3,1.8,.8,.13,0x1b2834);furnishing(cx-9+j*8,.5,cz+6,1,1,1,0x304d69)}
+  let guard=person(0x253e79);guard.position.set(cx,0,cz-7);scene.add(guard);
+ }else if(name==='Δικαστήριο'){
+  label('ΑΙΘΟΥΣΑ ΔΙΚΑΣΤΗΡΙΟΥ',cx,6,cz-13,1.2);furnishing(cx,1.5,cz-8,13,3,2,0x65432c);
+  for(let j=0;j<3;j++)furnishing(cx,0.65,cz+j*4,16,1.3,1.2,0x78553b);
+  furnishing(cx,2.5,cz-9,2,.15,.5,0xb9a16b);
+ }else if(name==='Περίπτερο'){
+  label('ΜΙΝΙ ΜΑΡΚΕΤ',cx,6,cz-13,1.2);
+  for(let j=0;j<3;j++){let x=cx-10+j*9;furnishing(x,1.5,cz-5,2.2,3,12,0x786f64);for(let k=0;k<5;k++)for(let r=0;r<3;r++)furnishing(x-.65+r*.65,1+k*.5,cz-9+(k+r)%4*2,.45,.4,.6,[0xd4aa37,0xa44336,0x4e986b][r])}
+  furnishing(cx+10,1,cz+8,5,2,2,0x65523c);
+ }else if(name==='Κατάστημα αυτοκινήτων'){
+  label('ΕΚΘΕΣΗ ΟΧΗΜΑΤΩΝ',cx,6,cz-13,1.2);
+  let showroom=car(0x176fa9);showroom.position.set(cx-6,.2,cz-4);scene.add(showroom);
+  let showroom2=car(0x222222);showroom2.position.set(cx+6,.2,cz-4);scene.add(showroom2);
+  furnishing(cx,1,cz+8,8,2,2,0x5b6977);
+ }else if(name==='Ξενοδοχείο'||name==='Σπίτι'){
+  label(name==='Σπίτι'?'ΤΟ ΣΠΙΤΙ ΣΟΥ':'ΔΩΜΑΤΙΟ ΞΕΝΟΔΟΧΕΙΟΥ',cx,6,cz-13,1.1);
+  furnishing(cx-6,.6,cz-6,7,1.2,5,0x655043);furnishing(cx-6,1.28,cz-6,6,.25,4.6,0xd7dedf);
+  furnishing(cx+7,1,cz-8,5,2,1,0x805b43);furnishing(cx+6,.5,cz+3,6,1,2,0x425969);
+  furnishing(cx+10,1,cz+9,2,2,2,0x668879);
+ }else{
+  label(name.toUpperCase(),cx,6,cz-13,1.2);furnishing(cx,1,cz-4,9,2,3,0x735641);
+ }
+ // A clearly marked exit at the near wall.
+ box(5,.15,.3,mat(0x46b37e),cx,4.3,cz+12);
+ label('ΕΞΟΔΟΣ • E',cx,5.5,cz+12,1);
+ interiors[name]={x:cx,z:cz,entrance:{x:locations[i][1],z:locations[i][2]+10}};
+}
+locations.forEach((l,i)=>makeInterior(l[0],i));
+function enterBuilding(){if(active){notice('Βγες πρώτα από το όχημα με E');return}let n=near();if(Math.hypot(player.position.x-n[1],player.position.z-n[2])>16){notice('Πλησίασε την είσοδο κτηρίου');return}inside=n[0];player.position.set(interiors[inside].x,.2,9);player.rotation.y=0;notice('Μπήκες: '+inside+' • F για υπηρεσίες • E για έξοδο')}
+function leaveBuilding(){if(!inside)return;let out=interiors[inside].entrance;inside=null;player.position.set(out.x,.2,out.z);notice('Βγήκες από το κτήριο')}
+
+let owned=new Set([vehicles[0],vehicles[2],vehicles[3]]),active=null,role='Πολίτης',money=10000,hp=100,wanted=0,jail=0,waypoint=null,keys={},last=performance.now(),msgTime=0,police=vehicles[4],soundOn=false,audio;
+function beep(f=440){if(!soundOn)return;audio??=new(window.AudioContext||window.webkitAudioContext)();let o=audio.createOscillator(),v=audio.createGain();o.frequency.value=f;o.connect(v);v.connect(audio.destination);v.gain.setValueAtTime(.035,audio.currentTime);v.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.13);o.start();o.stop(audio.currentTime+.14)}
+function notice(t){document.querySelector('#notice').textContent=t;msgTime=performance.now()+4000;beep(560)}
+function near(){if(inside)return locations.find(l=>l[0]===inside);let pos=active?active.g.position:player.position;return [...locations].sort((a,b)=>Math.hypot(pos.x-a[1],pos.z-a[2])-Math.hypot(pos.x-b[1],pos.z-b[2]))[0]}
+function panel(title,actions){document.querySelector('#ptitle').textContent=title;let b=document.querySelector('#pbody');b.innerHTML='';for(let [name,fn] of actions){let bt=document.createElement('button');bt.textContent=name;bt.onclick=()=>{fn();closePanel()};b.append(bt)}document.querySelector('#panel').style.display='block'}
+window.closePanel=()=>document.querySelector('#panel').style.display='none';
+function interact(){if(!inside){enterBuilding();return}if(jail>0){notice('Είσαι στη φυλακή. Περίμενε την αποφυλάκιση.');return}let n=near(),pos=active?active.g.position:player.position;if(!inside&&Math.hypot(pos.x-n[1],pos.z-n[2])>16){notice('Πλησίασε ένα κτήριο ή άνοιξε τον χάρτη.');return}let name=n[0],jobs=()=>{role=name==='Αστυνομικό Τμήμα'?'Αστυνομικός':name==='Δικαστήριο'?'Δικαστής':'Περιπτεράς';money+=500;notice('Νέα εργασία: '+role+' • +500€')};let opts=[];
+if(name==='Αστυνομικό Τμήμα')opts=[['Κάνε καταγγελία',()=>{wanted=0;notice('Η καταγγελία καταχωρίστηκε')}],['Γίνε αστυνομικός',jobs],['Παραίτηση από εργασία',()=>{role='Πολίτης';notice('Είσαι πολίτης')}]];
+if(name==='Δικαστήριο')opts=[['Γίνε δικαστής',jobs],['Δίκασε υπόθεση (+300€)',()=>{money+=300;notice('Η υπόθεση ολοκληρώθηκε')}]];
+if(name==='Περίπτερο')opts=[['Πάρε πράγματα (50€ / +20 ζωή)',()=>{if(money>=50){money-=50;hp=Math.min(100,hp+20);notice('Αγόρασες προμήθειες')}else notice('Δεν έχεις χρήματα')}],['Γίνε περιπτεράς',jobs],['Εργάσου (+150€)',()=>{money+=150;notice('Πληρώθηκες 150€')}]];
+if(name==='Ξενοδοχείο')opts=[['Διανυκτέρευση (100€ / πλήρης ζωή)',()=>{if(money>=100){money-=100;hp=100;notice('Ξεκουράστηκες')}else notice('Δεν έχεις χρήματα')}]];
+if(name==='Σπίτι')opts=[['Μπες στο σπίτι / ξεκουράσου',()=>{hp=100;notice('Καλώς ήρθες σπίτι!')}],['Πάρε ημερήσιο εισόδημα (+100€)',()=>{money+=100;notice('+100€')}]];
+if(name==='Κατάστημα αυτοκινήτων')opts=[['Αγόρασε sport αυτοκίνητο — 4.000€',()=>buy(4000,0x1668a1)],['Αγόρασε πολυτελές — 7.000€',()=>buy(7000,0x10151b)],['Αγόρασε οικονομικό — 2.000€',()=>buy(2000,0xe7e7e7)]];
+if(name==='Φυλακές Κορυδαλλού')opts=[['Επίσκεψη στη φυλακή',()=>notice('Επισκέφθηκες τις φυλακές Κορυδαλλού')],['Υπηρεσία φύλαξης (+200€)',()=>{if(role==='Αστυνομικός'){money+=200;notice('+200€')}else notice('Μόνο για αστυνομικούς')}]];
+if(name==='Λιμάνι')opts=[['Πληροφορίες πλοίων',()=>notice('Πλησίασε το σκάφος και πάτησε E')]];
+if(name==='Πίστα αγώνων')opts=[['Έναρξη αγώνα (+400€)',()=>{money+=400;notice('Ολοκλήρωσες δοκιμαστικό αγώνα! +400€')}]];
+panel(name,opts)}
+function buy(cost,color){if(money<cost){notice('Δεν έχεις αρκετά χρήματα');return}money-=cost;let v=spawn('car',-104+vehicles.length%4*5,55,color,cost);owned.add(v);notice('Αγόρασες αυτοκίνητο! Βρίσκεται έξω από το κατάστημα.')}
+function toggleVehicle(){if(inside){if(jail>0){notice('Δεν μπορείς να φύγεις πριν αποφυλακιστείς');return}leaveBuilding();return}if(jail)return;if(active){player.position.copy(active.g.position);player.position.x+=2.5;player.visible=true;active=null;notice('Βγήκες από το όχημα');return}let v=vehicles.find(v=>Math.hypot(v.g.position.x-player.position.x,v.g.position.z-player.position.z)<5);if(!v){notice('Πλησίασε ένα όχημα');return}if(v.kind==='police'&&role!=='Αστυνομικός'){wanted=Math.max(2,wanted);notice('Πήρες αστυνομικό όχημα! Καταζητείσαι')}else if(!owned.has(v)){wanted=Math.max(1,wanted);notice('Πήρες ξένο όχημα! Η αστυνομία ειδοποιήθηκε')}active=v;player.visible=false;notice('Οδήγηση: WASD / βελάκια • E έξοδος')}
+document.querySelector('#interact').onclick=interact;document.querySelector('#vehicle').onclick=toggleVehicle;document.querySelector('#sound').onclick=()=>{soundOn=!soundOn;document.querySelector('#sound').textContent=soundOn?'🔊 Ήχος ON':'🔇 Ήχος OFF';beep()};
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();if(e.repeat)return;if(e.key.toLowerCase()==='e')toggleVehicle();if(e.key.toLowerCase()==='f')interact();if(e.key.toLowerCase()==='m')openMap()});addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);for(let b of document.querySelectorAll('[data-key]')){let k=b.dataset.key;b.onpointerdown=e=>{e.preventDefault();keys[k]=true;b.setPointerCapture(e.pointerId)};b.onpointerup=b.onpointercancel=()=>keys[k]=false}
+const mm=document.querySelector('#map'),bm=document.querySelector('#bigmap'),sel=document.querySelector('#dest');locations.forEach((l,i)=>sel.add(new Option(l[0],i)));function openMap(){document.querySelector('#mapFull').style.display='block';drawMap(bm)}mm.onclick=openMap;document.querySelector('#closemap').onclick=()=>document.querySelector('#mapFull').style.display='none';document.querySelector('#setdest').onclick=()=>{let l=locations[+sel.value];waypoint={x:l[1],z:l[2],name:l[0]};notice('GPS: '+l[0]);document.querySelector('#mapFull').style.display='none'};bm.onclick=e=>{let r=bm.getBoundingClientRect(),x=(e.clientX-r.left)/r.width*bm.width,z=(e.clientY-r.top)/r.height*bm.height;waypoint={x:x/bm.width*430-170,z:z/bm.height*210-105,name:'Προσωπικό σημάδι'};notice('Το σημάδι τοποθετήθηκε');drawMap(bm)};
+function drawMap(c){let a=c.getContext('2d'),w=c.width,h=c.height,px=x=>(x+170)/430*w,pz=z=>(z+105)/210*h;a.clearRect(0,0,w,h);a.fillStyle='#1d7090';a.fillRect(0,0,w,h);a.fillStyle='#638c5b';a.fillRect(px(-156),pz(-100),px(-28)-px(-156),pz(100)-pz(-100));a.fillRect(px(126),pz(-100),px(251)-px(126),pz(100)-pz(-100));a.strokeStyle='#495058';a.lineWidth=Math.max(2,w/140);for(let x of [-135,-105,-75,-45,145,175,205,235]){a.beginPath();a.moveTo(px(x),pz(-95));a.lineTo(px(x),pz(95));a.stroke()}for(let z of [-80,-40,0,40,80])for(let [x1,x2] of [[-155,-29],[126,251]]){a.beginPath();a.moveTo(px(x1),pz(z));a.lineTo(px(x2),pz(z));a.stroke()}a.beginPath();a.moveTo(px(-29),pz(0));a.lineTo(px(126),pz(0));a.stroke();for(let l of locations){a.fillStyle='#f5d38a';a.beginPath();a.arc(px(l[1]),pz(l[2]),Math.max(3,w/170),0,7);a.fill();if(w>500){a.fillStyle='white';a.font='13px Arial';a.fillText(l[0],px(l[1])+7,pz(l[2])-5)}}let p=active?active.g.position:player.position;a.fillStyle='#ff4545';a.beginPath();a.arc(px(p.x),pz(p.z),Math.max(4,w/125),0,7);a.fill();if(waypoint){a.strokeStyle='#ffe34a';a.lineWidth=2;a.beginPath();a.moveTo(px(p.x),pz(p.z));a.lineTo(px(waypoint.x),pz(waypoint.z));a.stroke();a.fillStyle='#ffe34a';a.beginPath();a.arc(px(waypoint.x),pz(waypoint.z),Math.max(4,w/120),0,7);a.fill()}}
+let camTarget=new THREE.Vector3(),clock=0;function tick(t){requestAnimationFrame(tick);let dt=Math.min((t-last)/1000,.045);last=t;clock+=dt;let p=active?active.g:player,forward=(keys.w||keys.arrowup?1:0)-(keys.s||keys.arrowdown?1:0),turn=(keys.a||keys.arrowleft?1:0)-(keys.d||keys.arrowright?1:0);
+if(!jail){if(active){p.rotation.y+=turn*dt*1.8*(forward<0?-1:1);let speed=active.kind==='bike'?15:active.kind==='boat'?17:25;p.position.x-=Math.sin(p.rotation.y)*forward*speed*dt;p.position.z-=Math.cos(p.rotation.y)*forward*speed*dt;player.position.copy(p.position)}else{player.rotation.y+=turn*dt*2.7;player.position.x-=Math.sin(player.rotation.y)*forward*9*dt;player.position.z-=Math.cos(player.rotation.y)*forward*9*dt}}if(inside){let room=interiors[inside];p.position.x=THREE.MathUtils.clamp(p.position.x,room.x-14,room.x+14);p.position.z=THREE.MathUtils.clamp(p.position.z,-12,12)}else{p.position.x=THREE.MathUtils.clamp(p.position.x,-151,247);p.position.z=THREE.MathUtils.clamp(p.position.z,-98,98)}
+for(let n of npcs){n.p.position.x+=Math.sin(clock*.4+n.seed)*dt*.55;n.p.position.z+=Math.cos(clock*.4+n.seed)*dt*.4}
+if(wanted&&role!=='Αστυνομικός'&&!jail&&!inside){let dx=p.position.x-police.g.position.x,dz=p.position.z-police.g.position.z,d=Math.hypot(dx,dz);police.g.rotation.y=Math.atan2(-dx,-dz);police.g.position.x+=dx/Math.max(1,d)*dt*10;police.g.position.z+=dz/Math.max(1,d)*dt*10;if(d<5){if(active){active=null;player.visible=true}jail=18;wanted=0;hp=Math.max(30,hp-20);inside='Φυλακές Κορυδαλλού';player.position.set(interiors[inside].x,.2,-5);notice('ΣΥΛΛΗΨΗ! Φυλακές Κορυδαλλού • 18 δευτερόλεπτα')}}if(jail>0){jail-=dt;if(jail<=0){jail=0;inside=null;player.position.set(179,.2,40);notice('Αποφυλακίστηκες!')}}let target=p.position.clone();target.y=1.5;let back=new THREE.Vector3(Math.sin(p.rotation.y)*12,active?8:6,Math.cos(p.rotation.y)*12);camera.position.lerp(target.clone().add(back),.09);camTarget.lerp(target,.15);camera.lookAt(camTarget);networkTick(t);renderer.render(scene,camera);document.querySelector('#stats').textContent=`${role} • ${money.toLocaleString('el-GR')}€ • ⭐ ${wanted}${jail>0?' • Φυλακή '+Math.ceil(jail)+'s':''}`;document.querySelector('#life').style.width=hp+'%';drawMap(mm);if(document.querySelector('#mapFull').style.display==='block')drawMap(bm);if(t>msgTime)document.querySelector('#notice').textContent=inside?'Μέσα: '+inside+' • F υπηρεσίες • E έξοδος':waypoint?'GPS → '+waypoint.name:'Πλησίασε ένα κτήριο και πάτα F για επιλογές.'}
+
+// Real multiplayer over WebSocket: server is authoritative for room membership,
+// clients exchange live positions, orientation, vehicle state and names.
+let socket=null,online=false,remote=new Map(),lastSend=0,clientId=null;
+const startScreen=document.querySelector('#startScreen'),connectBox=document.querySelector('#connectBox');
+document.querySelector('#solo').onclick=()=>{startScreen.style.display='none';online=false;notice('Λειτουργία ενός παίκτη')};
+document.querySelector('#friends').onclick=()=>connectBox.style.display='block';
+document.querySelector('#join').onclick=()=>{
+ let status=document.querySelector('#connectionStatus'),room=document.querySelector('#room').value.trim().replace(/[^a-zA-Z0-9_-]/g,'').slice(0,24)||'greece',name=document.querySelector('#nick').value.trim().slice(0,18)||'Παίκτης';
+ if(socket)socket.close();
+ status.textContent='Σύνδεση...';
+ let protocol=location.protocol==='https:'?'wss:':'ws:';
+ if(location.protocol==='file:'){status.textContent='Άνοιξε το παιχνίδι από τη διεύθυνση του Node.js server, όχι από αρχείο, για να παίξεις online.';return}
+ socket=new WebSocket(protocol+'//'+location.host);
+ socket.onopen=()=>socket.send(JSON.stringify({type:'join',room,name}));
+ socket.onmessage=e=>{
+  let data;try{data=JSON.parse(e.data)}catch{return}
+  if(data.type==='welcome'){clientId=data.id;online=true;startScreen.style.display='none';notice('Συνδέθηκες στο δωμάτιο '+room)}
+  if(data.type==='state'&&data.id!==clientId){
+   let r=remote.get(data.id);
+   if(!r){let avatar=person(0x963d74);scene.add(avatar);let nameTag=document.createElement('canvas');nameTag.width=256;nameTag.height=64;let ctx=nameTag.getContext('2d');ctx.fillStyle='#10263c';ctx.fillRect(0,0,256,64);ctx.fillStyle='white';ctx.textAlign='center';ctx.font='bold 25px Arial';ctx.fillText(data.name||'Παίκτης',128,41);let sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(nameTag)}));sprite.scale.set(5,1.25,1);avatar.add(sprite);sprite.position.y=3.8;r={avatar,target:new THREE.Vector3(),rotation:0};remote.set(data.id,r)}
+   r.target.set(data.x,.2,data.z);r.rotation=data.rot||0;r.avatar.visible=!data.inside;
+  }
+  if(data.type==='leave'){let r=remote.get(data.id);if(r){scene.remove(r.avatar);remote.delete(data.id)}}
+  if(data.type==='error')status.textContent=data.message;
+ };
+ socket.onclose=()=>{if(online)notice('Χάθηκε η σύνδεση multiplayer');online=false;for(let r of remote.values())scene.remove(r.avatar);remote.clear()};
+ socket.onerror=()=>status.textContent='Δεν ήταν δυνατή η σύνδεση. Έλεγξε ότι λειτουργεί ο server.';
+};
+function networkTick(t){
+ if(online&&socket?.readyState===WebSocket.OPEN&&t-lastSend>100){
+  let q=active?active.g:player;
+  socket.send(JSON.stringify({type:'state',x:q.position.x,z:q.position.z,rot:q.rotation.y,inside:!!inside,vehicle:active?.kind||null}));
+  lastSend=t;
+ }
+ for(let r of remote.values()){r.avatar.position.lerp(r.target,.22);r.avatar.rotation.y+=(r.rotation-r.avatar.rotation.y)*.2}
+}
+
+requestAnimationFrame(tick);addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script></body></html>
